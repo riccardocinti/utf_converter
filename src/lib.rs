@@ -1,8 +1,8 @@
 pub fn convert_to_bytes(codepoint: usize) -> String {
-  find_octect(&codepoint).encode()
+  find_octect(codepoint).encode()
 }
 
-fn find_octect(codepoint: &usize) -> Octect {
+fn find_octect(codepoint: usize) -> Octect {
   let converted_codepoint = format!("{:b}", codepoint);
   match converted_codepoint.len() {
     1..=7 => Octect::One { codepoint },
@@ -12,14 +12,14 @@ fn find_octect(codepoint: &usize) -> Octect {
   }
 }
 
-enum Octect<'a> {
-  One { codepoint: &'a usize },
-  Two { codepoint: &'a usize },
-  Three { codepoint: &'a usize },
-  Four { codepoint: &'a usize },
+enum Octect {
+  One { codepoint: usize },
+  Two { codepoint: usize },
+  Three { codepoint: usize },
+  Four { codepoint: usize },
 }
 
-impl<'a> Octect<'a> {
+impl Octect {
   fn encode(&self) -> String {
     match self {
       Octect::One { codepoint } => format!("0{:07b}", codepoint),
@@ -33,13 +33,13 @@ impl<'a> Octect<'a> {
 fn build_octect(bit_prefix: &str, formatted_codepoint: String) -> String {
   let mut octect = String::new();
   let mut tail = String::new();
-  for c in formatted_codepoint.chars().rev() {
+  for bit in formatted_codepoint.chars().rev() {
     if tail.len() == 6 {
       tail = format!("10{}", tail);
       octect = format!("{}{}", tail, octect);
       tail = String::new();
     }
-    tail = format!("{}{}", c, tail);
+    tail = format!("{}{}", bit, tail);
   }
   let head = format!("{}{}", bit_prefix, tail);
   format!("{}{}", head, octect)
@@ -51,20 +51,17 @@ mod tests {
 
   #[test]
   fn test_find_octect() {
+    assert!(matches!(find_octect(0x61), Octect::One { codepoint: 0x61 }));
     assert!(matches!(
-      find_octect(&0x61),
-      Octect::One { codepoint: 0x61 }
-    ));
-    assert!(matches!(
-      find_octect(&0x0111),
+      find_octect(0x0111),
       Octect::Two { codepoint: 0x0111 }
     ));
     assert!(matches!(
-      find_octect(&0x1EDF),
+      find_octect(0x1EDF),
       Octect::Three { codepoint: 0x1EDF }
     ));
     assert!(matches!(
-      find_octect(&0x1F602),
+      find_octect(0x1F602),
       Octect::Four { codepoint: 0x1F602 }
     ));
   }
