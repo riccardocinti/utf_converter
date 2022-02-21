@@ -1,14 +1,20 @@
+use std::io;
+
 pub fn convert_to_bytes(codepoint: usize) -> String {
-  find_octect(codepoint).encode()
+  find_octect(codepoint).expect("Octect not found").encode()
 }
 
-fn find_octect(codepoint: usize) -> Octect {
+fn find_octect(codepoint: usize) -> Result<Octect, io::Error> {
   let converted_codepoint = format!("{:b}", codepoint);
   match converted_codepoint.len() {
-    1..=7 => Octect::One { codepoint },
-    8..=11 => Octect::Two { codepoint },
-    12..=16 => Octect::Three { codepoint },
-    _ => Octect::Four { codepoint },
+    1..=7 => Ok(Octect::One { codepoint }),
+    8..=11 => Ok(Octect::Two { codepoint }),
+    12..=16 => Ok(Octect::Three { codepoint }),
+    17..=21 => Ok(Octect::Four { codepoint }),
+    _ => Err(io::Error::new(
+      io::ErrorKind::InvalidData,
+      "Unexpected or malformed UTF-8 input.",
+    )),
   }
 }
 
@@ -51,18 +57,25 @@ mod tests {
 
   #[test]
   fn test_find_octect() {
-    assert!(matches!(find_octect(0x61), Octect::One { codepoint: 0x61 }));
+    assert!(matches!(
+      find_octect(0x61),
+      Ok(Octect::One { codepoint: 0x61 })
+    ));
     assert!(matches!(
       find_octect(0x0111),
-      Octect::Two { codepoint: 0x0111 }
+      Ok(Octect::Two { codepoint: 0x0111 })
     ));
     assert!(matches!(
       find_octect(0x1EDF),
-      Octect::Three { codepoint: 0x1EDF }
+      Ok(Octect::Three { codepoint: 0x1EDF })
     ));
     assert!(matches!(
       find_octect(0x1F602),
-      Octect::Four { codepoint: 0x1F602 }
+      Ok(Octect::Four { codepoint: 0x1F602 })
+    ));
+    assert!(matches!(
+      find_octect(0x7FFFFFFF),
+      Err(_)
     ));
   }
 
